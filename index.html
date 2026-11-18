@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Camps – overzicht</title>
+<style>
+:root{--ink:#1d2b27;--muted:#68756f;--line:#e1e8e4;--green:#176b50;--pale:#f3f7f4;--white:#fff}
+*{box-sizing:border-box}body{margin:0;background:#f6f8f6;color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+main{max-width:1400px;margin:36px auto;padding:0 22px}h1{font-size:28px;margin:0 0 6px}.sub{color:var(--muted);margin:0 0 10px}
+.status{font-size:12px;color:var(--muted);margin:0 0 20px}.status.error{color:#9a4a24}.toolbar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+input{font:inherit;padding:11px 13px;border:1px solid var(--line);border-radius:9px;background:white;min-width:260px;flex:1;max-width:440px}.count{color:var(--muted);font-size:13px;margin-left:auto}
+.wrap{overflow:auto;background:white;border:1px solid var(--line);border-radius:14px;box-shadow:0 5px 20px #20352a0b}table{width:100%;border-collapse:collapse;min-width:900px}
+th,td{padding:13px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}th{background:var(--pale);font-size:12px;text-transform:uppercase;letter-spacing:.045em;color:#52645b;position:sticky;top:0;cursor:pointer;white-space:nowrap}th:hover{color:var(--green)}tbody tr:hover{background:#f8fbf9}tbody tr:last-child td{border-bottom:0}td:nth-child(3){font-weight:600;min-width:230px}td:nth-child(8){white-space:nowrap}
+.more{display:inline-flex;align-items:center;justify-content:center;padding:7px 13px;border-radius:7px;background:var(--green);color:white;text-decoration:none;font-weight:650;font-size:13px}.more:hover{background:#10533d}.empty{padding:30px;text-align:center;color:var(--muted);display:none}footer{color:var(--muted);font-size:12px;margin-top:13px}
+@media(max-width:600px){main{margin:22px auto;padding:0 12px}h1{font-size:23px}}
+</style>
+</head>
+<body><main>
+<h1>Camps – overzicht</h1>
+<p class="sub">Overzicht van de Rotary Youth Camps. Klik op <b>More</b> om de bijhorende uitnodiging te openen.</p>
+<p class="status" id="status" aria-live="polite">Gegevens worden geladen…</p>
+<div class="toolbar"><input id="search" type="search" placeholder="Zoek op land, kamp, datum, leeftijd…" aria-label="Zoek kampen"><span class="count" id="count"></span></div>
+<div class="wrap"><table><thead><tr><th>#</th><th>Country</th><th>Camp Name</th><th>Dates</th><th>Age</th><th>Fee</th><th>Max#</th><th>Available</th><th>Invitation</th></tr></thead><tbody id="body"></tbody></table><div class="empty" id="empty">Geen kampen gevonden.</div></div>
+<footer>Gegevensbron: <a href="https://polaris.rotarybelux.org/nl/content/news/show/13512" target="_blank" rel="noopener">Rotary Belux – Polaris</a>. De synchronisatie wordt dagelijks uitgevoerd. Klik op een kolomtitel om te sorteren.</footer>
+</main>
+<script>
+// Fallback: de bestaande lijst blijft zichtbaar als Polaris tijdelijk niet bereikbaar is.
+const fallback = [
+ {values:["1","Taiwan","Discover Sun Moon Lake","26/12-8/1","15-17","500","14 (1/ctry)","open","more"],link:"https://polaris.rotarybelux.org/nl/file/6af4e2cc22a79/download"},
+ {values:["2","India","Discover India Different cultures/history:lifestyle","30/1-12/2","16-24","1300","24","open","more"],link:"https://polaris.rotarybelux.org/nl/file/6af3497603215/download"},
+ {values:["3","Brazil","Environment Camp","12-26/7","15-18","450$","16 (2/ctry)","open","more"],link:"https://polaris.rotarybelux.org/nl/file/6af34fb1e596b/download"},
+ {values:["4","Sweden","Sailling Camp","4-14/8","18-20","850","","deadl 2/4","more"],link:"https://polaris.rotarybelux.org/nl/file/6af353d29278a/download"},
+ {values:["5","Taiwan","On Two Wheels","22/7-4/8","18-25","1.300$","","open","more"],link:"https://polaris.rotarybelux.org/nl/file/6af3553d55974/download"},
+ {values:["6","Brazil","Amazon Nature & Adventure","2-11augustus","","1850","","open","more"],link:"https://polaris.rotarybelux.org/nl/file/6af35858ac502/download"},
+ {values:["7","France","European Youth Camp Strasbourg","4-14/7","16-18","500","","deadl 31/3","more"],link:"https://polaris.rotarybelux.org/nl/file/6afb4f71356db/download"},
+ {values:["8","Taiwan","Mandarin & Culture Exploring","24/7-6/8","16-19","900$","30","deadl 30/4","more"],link:"https://polaris.rotarybelux.org/nl/file/6afb4fb2678d0/download"},
+ {values:["9","Canada","Wilderness Canoe Camp","7-21/7","18-21","1400$","25","open","more"],link:"https://polaris.rotarybelux.org/nl/file/6afb5012cf4c4/download"}
+];
+const tbody=document.getElementById('body'),search=document.getElementById('search'),count=document.getElementById('count'),empty=document.getElementById('empty'),statusEl=document.getElementById('status');
+let camps=fallback,sortCol=-1,sortAsc=true;
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function render(){const q=search.value.trim().toLocaleLowerCase();let items=camps.filter(x=>x.values.join(' ').toLocaleLowerCase().includes(q));if(sortCol>=0)items.sort((a,b)=>(a.values[sortCol]||'').localeCompare(b.values[sortCol]||'',undefined,{numeric:true,sensitivity:'base'})*(sortAsc?1:-1));tbody.innerHTML=items.map(x=>'<tr>'+x.values.map((v,i)=>i===8?'<td>'+(x.link?'<a class="more" href="'+escapeHtml(x.link)+'" target="_blank" rel="noopener noreferrer">More ↗</a>':'')+'</td>':'<td>'+escapeHtml(v)+'</td>').join('')+'</tr>').join('');count.textContent=items.length+(items.length===1?' kamp':' kampen');empty.style.display=items.length?'none':'block';}
+search.addEventListener('input',render);document.querySelectorAll('thead th').forEach((th,i)=>th.addEventListener('click',()=>{if(sortCol===i)sortAsc=!sortAsc;else{sortCol=i;sortAsc=true;}render();}));render();
+async function loadCamps(){try{const r=await fetch('/.netlify/functions/camps',{headers:{'Accept':'application/json'},cache:'no-store'});if(!r.ok)throw new Error('Synchronisatie niet beschikbaar');const data=await r.json();if(!Array.isArray(data.camps)||!data.camps.length)throw new Error('Geen kampgegevens ontvangen');camps=data.camps;render();const when=data.updatedAt?new Date(data.updatedAt).toLocaleString('nl-BE'):'onbekend';statusEl.textContent='Laatst bijgewerkt: '+when+' · bron: Polaris';statusEl.className='status';}catch(e){statusEl.textContent='Polaris tijdelijk niet bereikbaar. De laatst ingebouwde gegevens worden getoond.';statusEl.className='status error';}}
+loadCamps();
+</script></body></html>
